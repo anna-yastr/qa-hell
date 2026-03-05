@@ -20,12 +20,12 @@ const ROTATE_DEG = 30;        // ±30 градусов
 
 // Spawn speed (geometric progression)
 const SPAWN_INTERVAL_START_MS = 900;
-const SPAWN_INTERVAL_MULTIPLIER = 0.90; // <1 быстрее
+const SPAWN_INTERVAL_MULTIPLIER = 0.96; // <1 быстрее
 const SPAWN_INTERVAL_MIN_MS = 180;
 
 // Defeat image sizing
 const DEFEAT_IMG_W = 520;
-const DEFEAT_IMG_H = 300;
+const DEFEAT_IMG_H = 350;
 const DEFEAT_IMG_Y_OFFSET = -40;
 
 // Assets
@@ -40,6 +40,7 @@ const SHOE_PREFIX = "assets/shoe";
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const restartBtn = document.getElementById("restartBtn");
+restartBtn.style.display = "none";
 
 let bugs = [];
 let score = 0;
@@ -100,6 +101,7 @@ function startSpawning(){
    ========================= */
 
 function resetRunState(){
+  restartBtn.style.display = "none";
   bugs = [];
   score = 0;
   gameOver = false;
@@ -343,6 +345,7 @@ function drawGameOver(){
 
   if(defeat.complete && defeat.naturalWidth > 0){
     ctx.drawImage(defeat, x, y, w, h);
+    restartBtn.style.display = "block";
   }
 
   ctx.textAlign = "center";
@@ -352,7 +355,7 @@ function drawGameOver(){
 
   ctx.fillStyle = "rgba(255,255,255,0.80)";
   ctx.font = "18px Arial";
-  ctx.fillText("Press Restart (or R)", canvas.width/2, canvas.height/2 + 155);
+  
 
   ctx.textAlign = "left";
 }
