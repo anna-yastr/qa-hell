@@ -1,10 +1,14 @@
+/* =========================
+   PAGE BACKGROUND
+   ========================= */
+
 body{
   margin:0;
   color:white;
   font-family: Arial, sans-serif;
   text-align:center;
 
-  /* фон ВОКРУГ поля */
+  /* фон вокруг игрового поля */
   background-image: url("assets/background.png");
   background-size: cover;
   background-position: center;
@@ -22,6 +26,10 @@ body::before{
   background: rgba(0,0,0,0.50);
   pointer-events: none;
 }
+
+/* =========================
+   LAYOUT
+   ========================= */
 
 .wrap{
   position: relative;
@@ -51,36 +59,10 @@ h1{
   font-size: 14px;
 }
 
-.btn{
-  appearance: none;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(0,0,0,0.35);
-  color: rgba(255,255,255,0.92);
-  padding: 10px 14px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-}
+/* =========================
+   GAME AREA
+   ========================= */
 
-.btn:hover{
-  background: rgba(0,0,0,0.45);
-}
-
-canvas{
-  display:block;
-
-  /* поле меньше примерно на 20% визуально */
-  width: 80%;
-  height: auto;
-
-  background: rgba(10,10,12,0.75);
-  margin: 14px auto 0;
-  border: 2px solid rgba(255,255,255,0.18);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-
-  touch-action: manipulation;
-}
 .gameArea{
   position: relative;
   display: flex;
@@ -88,21 +70,33 @@ canvas{
   width: 100%;
 }
 
-.restartOverlay{
-  position: absolute;
-  left: 50%;
-  top: 72%;
-  transform: translate(-50%, -50%);
-  z-index: 10;              /* <-- важно */
-  pointer-events: auto;     /* <-- важно */
-  ...
+/* игровое поле */
+canvas{
+  display:block;
+
+  /* поле меньше примерно на 20% */
+  width: 80%;
+  height: auto;
+
+  background: rgba(10,10,12,0.75);
+  margin: 14px auto 0;
+
+  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 12px;
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+
+  touch-action: manipulation;
 }
 
-/* Большая кнопка поверх поля */
+/* =========================
+   RESTART BUTTON OVERLAY
+   ========================= */
+
 .restartOverlay{
   position: absolute;
 
-  /* Позиция “примерно там где текст” */
+  /* положение поверх defeat */
   left: 50%;
   top: 72%;
 
@@ -116,27 +110,45 @@ canvas{
   border-radius: 16px;
 
   border: 2px solid rgba(255,255,255,0.28);
+
   background: rgba(0,0,0,0.65);
   color: rgba(255,255,255,0.95);
 
   cursor: pointer;
-  display: none; /* по умолчанию скрыта */
+
+  display: none;
+
+  z-index: 10;
 
   box-shadow: 0 12px 30px rgba(0,0,0,0.45);
 }
 
 .restartOverlay:hover{
-  background: rgba(0,0,0,0.80);
+  background: rgba(0,0,0,0.85);
 }
+
+/* =========================
+   MOBILE
+   ========================= */
+
 @media (max-width: 720px){
+
   .top{
     flex-direction: column;
     align-items: stretch;
   }
+
   .titleBlock{
     text-align:center;
   }
+
   canvas{
     width: 96%;
   }
+
+  .restartOverlay{
+    font-size: 24px;
+    padding: 14px 34px;
+  }
+
 }
