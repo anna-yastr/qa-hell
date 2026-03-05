@@ -1,2 +1,2 @@
 # qa-hell
-Mini game about QA work everyday
+Mini game about QA work everyday.
