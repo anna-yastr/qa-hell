@@ -1,95 +1,277 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>QA Hell</title>
 <style>
-body{
+  body{
     margin:0;
     background:#111;
     color:white;
-    font-family:Arial;
+    font-family:Arial, sans-serif;
     text-align:center;
-}
+  }
 
-canvas{
+  .wrap{
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 14px;
+  }
+
+  canvas{
+    display:block;
+    width: 100%;
+    height: auto;
     background:#222;
-    margin-top:20px;
+    margin: 14px auto 0;
     border:2px solid #444;
-}
+    border-radius: 12px;
+    touch-action: manipulation; /* чтобы тап на мобиле не скроллил/не зумил */
+  }
+
+  .muted{ color: rgba(255,255,255,0.7); margin-top: 6px; }
 </style>
 </head>
 
 <body>
+  <div class="wrap">
+    <h1>QA Hell</h1>
+    <div class="muted">Click cursed shoes before they flood the screen</div>
 
-<h1>QA Hell</h1>
-<p>Click bugs before they fill the screen</p>
+    <canvas id="game" width="900" height="540"></canvas>
 
-<canvas id="game" width="800" height="500"></canvas>
+    <div class="muted" style="margin-top:10px;">
+      Tip: click/tap fast. Refresh page to restart.
+    </div>
+  </div>
 
 <script>
+/* =========================
+   SETTINGS (твои “крутилки”)
+   ========================= */
 
-const canvas = document.getElementById("game")
-const ctx = canvas.getContext("2d")
+// Порог проигрыша: если багов строго больше — проигрыш
+const MAX_BUGS_ON_SCREEN = 15;
 
-let bugs = []
-let score = 0
+// Масштаб картинок (1.0 = базовый размер). Меняй как нравится.
+const IMAGE_SCALE = 0.75;
+
+// Базовый размер “квадрата” под картинку (до скейла)
+const BASE_BUG_SIZE = 120;
+
+// Начальный интервал спавна (мс)
+const SPAWN_INTERVAL_START_MS = 900;
+
+// Геометрическое ускорение: каждый спавн интервал умножается на этот коэффициент.
+// < 1.0 = быстрее. Например 0.93 значит “каждый раз на 7% быстрее”.
+const SPAWN_INTERVAL_MULTIPLIER = 0.93;
+
+// Минимальный интервал, чтобы не превратилось в 1000 багов/сек
+const SPAWN_INTERVAL_MIN_MS = 180;
+
+// Пути к ассетам
+const BG_SRC = "assets/background.png";
+const DEFEAT_SRC = "assets/defeat.png"; // можно не иметь, но у тебя есть
+const SHOE_COUNT = 15;                 // shoe1.png ... shoe15.png
+const SHOE_PREFIX = "assets/shoe";
+
+/* =========================
+   GAME CODE
+   ========================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let bugs = [];
+let score = 0;
+let gameOver = false;
+
+// Load images
+const bg = new Image();
+bg.src = BG_SRC;
+
+const defeat = new Image();
+defeat.src = DEFEAT_SRC;
+
+// shoes 1..15
+const shoes = [];
+for(let i=1; i<=SHOE_COUNT; i++){
+  const img = new Image();
+  img.src = `${SHOE_PREFIX}${i}.png`;
+  shoes.push(img);
+}
+
+// helper: random int [0..n-1]
+function randi(n){ return Math.floor(Math.random() * n); }
+
+// scaled size
+const BUG_SIZE = Math.max(10, Math.floor(BASE_BUG_SIZE * IMAGE_SCALE));
+
+// spawn control (геометрическая прогрессия)
+let spawnInterval = SPAWN_INTERVAL_START_MS;
+let spawnTimerId = null;
+
+function startSpawning(){
+  stopSpawning();
+  scheduleNextSpawn();
+}
+
+function stopSpawning(){
+  if(spawnTimerId !== null){
+    clearTimeout(spawnTimerId);
+    spawnTimerId = null;
+  }
+}
+
+function scheduleNextSpawn(){
+  if(gameOver) return;
+
+  spawnTimerId = setTimeout(() => {
+    spawnBug();
+    // геометрическое ускорение: интервал уменьшается
+    spawnInterval = Math.max(SPAWN_INTERVAL_MIN_MS, Math.floor(spawnInterval * SPAWN_INTERVAL_MULTIPLIER));
+    scheduleNextSpawn();
+  }, spawnInterval);
+}
 
 function spawnBug(){
-    bugs.push({
-        x: Math.random()*750,
-        y: Math.random()*450,
-        size: 20
-    })
+  if(gameOver) return;
+
+  const img = shoes[randi(shoes.length)];
+
+  // чтобы картинка не вылезала за границы
+  const x = Math.random() * (canvas.width  - BUG_SIZE);
+  const y = Math.random() * (canvas.height - BUG_SIZE);
+
+  bugs.push({ x, y, size: BUG_SIZE, img });
+
+  if(bugs.length > MAX_BUGS_ON_SCREEN){
+    gameOver = true;
+    stopSpawning();
+  }
 }
 
-setInterval(spawnBug, 800)
+// Hit test (кликаем по прямоугольнику)
+function tryHit(mx, my){
+  if(gameOver) return;
 
-canvas.addEventListener("click", e => {
-
-    const rect = canvas.getBoundingClientRect()
-    const mx = e.clientX - rect.left
-    const my = e.clientY - rect.top
-
-    bugs = bugs.filter(b => {
-
-        const hit =
-        mx > b.x &&
-        mx < b.x + b.size &&
-        my > b.y &&
-        my < b.y + b.size
-
-        if(hit) score++
-
-        return !hit
-    })
-})
-
-function draw(){
-
-    ctx.clearRect(0,0,800,500)
-
-    ctx.fillStyle="white"
-    ctx.font="20px Arial"
-    ctx.fillText("Score: "+score,10,25)
-
-    ctx.fillStyle="red"
-
-    bugs.forEach(b=>{
-        ctx.fillRect(b.x,b.y,b.size,b.size)
-    })
-
-    if(bugs.length > 25){
-        ctx.fillStyle="white"
-        ctx.font="50px Arial"
-        ctx.fillText("QA FAILED",250,250)
+  for(let i = bugs.length - 1; i >= 0; i--){
+    const b = bugs[i];
+    const hit = (mx >= b.x && mx <= b.x + b.size && my >= b.y && my <= b.y + b.size);
+    if(hit){
+      bugs.splice(i, 1);
+      score += 1;
+      return;
     }
-
-    requestAnimationFrame(draw)
+  }
 }
 
-draw()
+function pointerPos(evt){
+  const rect = canvas.getBoundingClientRect();
+  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
 
+  // переводим координаты из CSS-скейла в координаты canvas
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top)  * scaleY
+  };
+}
+
+canvas.addEventListener("click", (e) => {
+  const p = pointerPos(e);
+  tryHit(p.x, p.y);
+});
+
+canvas.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  const p = pointerPos(e);
+  tryHit(p.x, p.y);
+}, { passive: false });
+
+function drawBackground(){
+  if(bg.complete && bg.naturalWidth > 0){
+    ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+  } else {
+    // fallback
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+  }
+}
+
+function drawHUD(){
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.font = "20px Arial";
+  ctx.fillText(`Score: ${score}`, 14, 28);
+
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = "14px Arial";
+  ctx.fillText(`Bugs: ${bugs.length}/${MAX_BUGS_ON_SCREEN}`, 14, 48);
+}
+
+function drawBugs(){
+  for(const b of bugs){
+    // если картинка ещё не загрузилась, рисуем плейсхолдер
+    if(b.img.complete && b.img.naturalWidth > 0){
+      ctx.drawImage(b.img, b.x, b.y, b.size, b.size);
+    } else {
+      ctx.fillStyle = "red";
+      ctx.fillRect(b.x, b.y, b.size, b.size);
+    }
+  }
+}
+
+function drawGameOver(){
+  // затемнение
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0,0,canvas.width, canvas.height);
+
+  // defeat картинка по центру (если есть)
+  const w = 420;
+  const h = 240;
+  const x = (canvas.width - w) / 2;
+  const y = (canvas.height - h) / 2 - 30;
+
+  if(defeat.complete && defeat.naturalWidth > 0){
+    ctx.drawImage(defeat, x, y, w, h);
+  }
+
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  ctx.font = "56px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 80);
+
+  ctx.fillStyle = "rgba(255,255,255,0.75)";
+  ctx.font = "18px Arial";
+  ctx.fillText("Refresh the page to restart", canvas.width/2, canvas.height/2 + 115);
+
+  ctx.textAlign = "left";
+}
+
+function loop(){
+  // background
+  drawBackground();
+
+  // bugs
+  drawBugs();
+
+  // hud
+  drawHUD();
+
+  if(gameOver){
+    drawGameOver();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// стартуем
+startSpawning();
+loop();
 </script>
 
 </body>
