@@ -7,13 +7,32 @@
 <style>
   body{
     margin:0;
-    background:#111;
     color:white;
     font-family:Arial, sans-serif;
     text-align:center;
+
+    /* ФОН ВОКРУГ ПОЛЯ */
+    background-image: url("assets/background.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+
+    /* если фон светлый — чуть затемним подложку */
+    position: relative;
+    min-height: 100vh;
+  }
+
+  /* затемняющая вуаль для читаемости */
+  body::before{
+    content:"";
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    pointer-events: none;
   }
 
   .wrap{
+    position: relative; /* поверх вуали */
     max-width: 980px;
     margin: 0 auto;
     padding: 14px;
@@ -21,16 +40,22 @@
 
   canvas{
     display:block;
-    width: 100%;
+
+    /* Поле меньше примерно на 20% визуально */
+    width: 80%;
     height: auto;
-    background:#222;
+
+    /* ВНУТРЕННИЙ ФОН ПОЛЯ */
+    background: rgba(10,10,12,0.75);
+
     margin: 14px auto 0;
-    border:2px solid #444;
+    border:2px solid rgba(255,255,255,0.18);
     border-radius: 12px;
-    touch-action: manipulation; /* mobile taps */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    touch-action: manipulation;
   }
 
-  .muted{ color: rgba(255,255,255,0.7); margin-top: 6px; }
+  .muted{ color: rgba(255,255,255,0.75); margin-top: 6px; }
 </style>
 </head>
 
@@ -39,7 +64,8 @@
     <h1>QA Hell</h1>
     <div class="muted">Tip: click/tap fast. Refresh page to restart.</div>
 
-    <canvas id="game" width="900" height="540"></canvas>
+    <!-- Уменьшили реальное разрешение канваса тоже примерно на 20% -->
+    <canvas id="game" width="720" height="432"></canvas>
   </div>
 
 <script>
@@ -49,10 +75,10 @@
 
 // Text overlay (center screen)
 const RULE_TEXT = "Click cursed shoes before they flood the screen";
-const RULE_FONT_SIZE = 26;        // <— размер правила (px)
-const COUNTDOWN_FONT_SIZE = 22;   // <— размер отсчёта (px)
-const RULE_Y_OFFSET = -10;        // <— выше/ниже центра (отриц = выше)
-const COUNTDOWN_Y_OFFSET = 30;    // <— ниже правила
+const RULE_FONT_SIZE = 24;
+const COUNTDOWN_FONT_SIZE = 22;
+const RULE_Y_OFFSET = -10;
+const COUNTDOWN_Y_OFFSET = 30;
 
 // Game rules
 const MAX_BUGS_ON_SCREEN = 15;
@@ -67,14 +93,13 @@ const SPAWN_INTERVAL_MULTIPLIER = 0.93; // <1 быстрее
 const SPAWN_INTERVAL_MIN_MS = 180;
 
 // Defeat window (image size tweak)
-const DEFEAT_IMG_W = 520;     // <— ширина defeat-картинки
-const DEFEAT_IMG_H = 300;     // <— высота defeat-картинки
-const DEFEAT_IMG_Y_OFFSET = -40; // <— подвинуть вверх/вниз
+const DEFEAT_IMG_W = 520;
+const DEFEAT_IMG_H = 300;
+const DEFEAT_IMG_Y_OFFSET = -40;
 
 // Assets
-const BG_SRC = "assets/background.png";
 const DEFEAT_SRC = "assets/defeat.png";
-const SHOE_COUNT = 15;                 // shoe1..shoe15
+const SHOE_COUNT = 15;
 const SHOE_PREFIX = "assets/shoe";
 
 /* =========================
@@ -92,11 +117,10 @@ let gameOver = false;
 const BUG_SIZE = Math.max(10, Math.floor(BASE_BUG_SIZE * IMAGE_SCALE));
 
 // --------- Asset preloading (no start until loaded) ---------
-const bg = new Image();
 const defeat = new Image();
 const shoes = [];
 
-let assetsToLoad = 2 + SHOE_COUNT; // bg + defeat + shoes
+let assetsToLoad = 1 + SHOE_COUNT; // defeat + shoes
 let assetsLoaded = 0;
 let readyToStart = false;
 
@@ -104,13 +128,9 @@ function markLoaded(){
   assetsLoaded++;
   if(assetsLoaded >= assetsToLoad){
     readyToStart = true;
-    startCountdown(); // запускаем 3..2..1
+    startCountdown();
   }
 }
-
-bg.onload = markLoaded;
-bg.onerror = markLoaded;
-bg.src = BG_SRC;
 
 defeat.onload = markLoaded;
 defeat.onerror = markLoaded;
@@ -129,14 +149,24 @@ let countdown = 3;
 let countdownActive = false;
 let countdownTimerId = null;
 
+// Loading dots animation
+let loadingDots = 0;
+let loadingDotsTimer = setInterval(() => {
+  loadingDots = (loadingDots + 1) % 4; // 0..3
+}, 350);
+
 function startCountdown(){
-  // если уже стартовали — не запускать второй раз
   if(countdownActive || gameOver) return;
+
+  // отключаем анимацию loading, больше не нужна
+  if(loadingDotsTimer){
+    clearInterval(loadingDotsTimer);
+    loadingDotsTimer = null;
+  }
 
   countdown = 3;
   countdownActive = true;
 
-  // 3 секунды: 3 -> 2 -> 1 -> GO
   countdownTimerId = setInterval(() => {
     countdown--;
     if(countdown <= 0){
@@ -210,8 +240,6 @@ function pointerPos(evt){
 
 function tryHit(mx, my){
   if(gameOver) return;
-
-  // пока идёт загрузка/отсчёт — не кликается
   if(!readyToStart || countdownActive) return;
 
   for(let i = bugs.length - 1; i >= 0; i--){
@@ -237,13 +265,13 @@ canvas.addEventListener("touchstart", (e) => {
 }, { passive: false });
 
 // --------- Drawing ---------
-function drawBackground(){
-  if(bg.complete && bg.naturalWidth > 0){
-    ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-  } else {
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0,0,canvas.width, canvas.height);
-  }
+function clearField(){
+  // Игровое поле НЕ использует background.png, оно однотонное и прозрачное
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+
+  // лёгкая подложка (чтобы, если clearRect оставляет прозрачность, всё равно читалось)
+  ctx.fillStyle = "rgba(10,10,12,0.35)";
+  ctx.fillRect(0,0,canvas.width, canvas.height);
 }
 
 function drawHUD(){
@@ -259,34 +287,29 @@ function drawHUD(){
 
 function drawBugs(){
   for(const b of bugs){
-    // Тут уже не будет красных квадратов, потому что мы не стартуем пока не загрузили всё.
     ctx.drawImage(b.img, b.x, b.y, b.size, b.size);
   }
 }
 
 function drawCenterOverlay(){
-  // затемнение чтобы текст читался
   ctx.fillStyle = "rgba(0,0,0,0.35)";
   ctx.fillRect(0,0,canvas.width, canvas.height);
 
   ctx.textAlign = "center";
 
-  // Rule text
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.font = `${RULE_FONT_SIZE}px Arial`;
   ctx.fillText(RULE_TEXT, canvas.width/2, canvas.height/2 + RULE_Y_OFFSET);
 
-  // Status line under rule
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   ctx.font = `${COUNTDOWN_FONT_SIZE}px Arial`;
 
   let line = "";
   if(!readyToStart){
-    line = `Loading assets: ${assetsLoaded}/${assetsToLoad}`;
+    const dots = ".".repeat(loadingDots);
+    line = `Loading${dots}`;
   } else if(countdownActive){
     line = `Starting in: ${countdown}`;
-  } else {
-    line = ""; // после старта не показываем
   }
 
   if(line){
@@ -300,7 +323,6 @@ function drawGameOver(){
   ctx.fillStyle = "rgba(0,0,0,0.60)";
   ctx.fillRect(0,0,canvas.width, canvas.height);
 
-  // defeat image center
   const w = DEFEAT_IMG_W;
   const h = DEFEAT_IMG_H;
   const x = (canvas.width - w) / 2;
@@ -323,19 +345,17 @@ function drawGameOver(){
 }
 
 function loop(){
-  drawBackground();
+  clearField();
 
   if(!gameOver){
     if(readyToStart && !countdownActive){
       drawBugs();
       drawHUD();
     } else {
-      // Loading / Countdown overlay
       drawCenterOverlay();
       drawHUD();
     }
   } else {
-    // show final frame background + bugs behind overlay (optional)
     drawBugs();
     drawHUD();
     drawGameOver();
