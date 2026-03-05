@@ -229,10 +229,14 @@ function spawnBug(){
   const img = shoes[randi(shoes.length)];
 
   // позиция так, чтобы не вылезало (с учётом size)
-  const x = Math.random() * (canvas.width  - size);
-  const y = Math.random() * (canvas.height - size);
+ const x = Math.random() * (canvas.width - size);
 
-  bugs.push({ x, y, size, img, rot });
+/* появляется немного выше поля */
+const y = -size;
+
+const vy = randf(2.5, 4.5);  // скорость падения
+
+bugs.push({ x, y, size, img, rot, vy });
 
   if(bugs.length > MAX_BUGS_ON_SCREEN){
     gameOver = true;
@@ -319,6 +323,12 @@ function drawBug(b){
 
 function drawBugs(){
   for(const b of bugs){
+
+    /* движение вниз */
+    if(b.vy){
+      b.y += b.vy;
+    }
+
     drawBug(b);
   }
 }
