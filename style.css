@@ -85,6 +85,17 @@ canvas{
   position: relative;
   display: flex;
   justify-content: center;
+  width: 100%;
+}
+
+.restartOverlay{
+  position: absolute;
+  left: 50%;
+  top: 72%;
+  transform: translate(-50%, -50%);
+  z-index: 10;              /* <-- важно */
+  pointer-events: auto;     /* <-- важно */
+  ...
 }
 
 /* Большая кнопка поверх поля */
