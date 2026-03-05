@@ -20,7 +20,7 @@ const ROTATE_DEG = 30;        // ±30 градусов
 
 // Spawn speed (geometric progression)
 const SPAWN_INTERVAL_START_MS = 900;
-const SPAWN_INTERVAL_MULTIPLIER = 0.96; // <1 быстрее
+const SPAWN_INTERVAL_MULTIPLIER = 0.96; // ближе к 1.0 = медленнее ускоряется
 const SPAWN_INTERVAL_MIN_MS = 180;
 
 // Defeat image sizing
@@ -39,8 +39,15 @@ const SHOE_PREFIX = "assets/shoe";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+
 const restartBtn = document.getElementById("restartBtn");
-restartBtn.style.display = "none";
+if(!restartBtn){
+  console.error("restartBtn not found. Check index.html for: <button id='restartBtn' ...>");
+} else {
+  restartBtn.style.display = "none";
+  // на всякий случай: чтобы точно ловила клики
+  restartBtn.style.pointerEvents = "auto";
+}
 
 let bugs = [];
 let score = 0;
@@ -74,6 +81,10 @@ function randi(n){ return Math.floor(Math.random() * n); }
 function randf(a,b){ return a + Math.random() * (b-a); }
 function degToRad(d){ return d * Math.PI / 180; }
 
+/* =========================
+   SPAWN CONTROL
+   ========================= */
+
 function stopSpawning(){
   if(spawnTimerId !== null){
     clearTimeout(spawnTimerId);
@@ -101,7 +112,8 @@ function startSpawning(){
    ========================= */
 
 function resetRunState(){
-  restartBtn.style.display = "none";
+  if(restartBtn) restartBtn.style.display = "none";
+
   bugs = [];
   score = 0;
   gameOver = false;
@@ -111,6 +123,7 @@ function resetRunState(){
 
   countdown = 3;
   countdownActive = false;
+
   if(countdownTimerId){
     clearInterval(countdownTimerId);
     countdownTimerId = null;
@@ -122,14 +135,15 @@ function resetRunState(){
   }
 }
 
-restartBtn.addEventListener("click", () => {
-  // рестарт без перезагрузки страницы
-  resetRunState();
-});
+if(restartBtn){
+  restartBtn.addEventListener("click", () => {
+    resetRunState();
+  });
+}
 
 // удобно: клавиша R
 window.addEventListener("keydown", (e) => {
-  if(e.key.toLowerCase() === "r"){
+  if(e.key && e.key.toLowerCase() === "r"){
     resetRunState();
   }
 });
@@ -224,6 +238,9 @@ function spawnBug(){
     gameOver = true;
     stopSpawning();
     if(countdownTimerId) clearInterval(countdownTimerId);
+
+    // показываем кнопку сразу при фиксации gameOver
+    if(restartBtn) restartBtn.style.display = "block";
   }
 }
 
@@ -245,7 +262,7 @@ function tryHit(mx, my){
   if(gameOver) return;
   if(!readyToStart || countdownActive) return;
 
-  // кликаем по axis-aligned bbox (проще и “достаточно”)
+  // кликаем по axis-aligned bbox
   for(let i = bugs.length - 1; i >= 0; i--){
     const b = bugs[i];
     const hit = (mx >= b.x && mx <= b.x + b.size && my >= b.y && my <= b.y + b.size);
@@ -290,7 +307,6 @@ function drawHUD(){
 }
 
 function drawBug(b){
-  // вращение вокруг центра картинки
   const cx = b.x + b.size / 2;
   const cy = b.y + b.size / 2;
 
@@ -335,9 +351,13 @@ function drawCenterOverlay(){
 }
 
 function drawGameOver(){
+  // гарантируем что кнопка видима на экране поражения
+  if(restartBtn) restartBtn.style.display = "block";
+
   ctx.fillStyle = "rgba(0,0,0,0.60)";
   ctx.fillRect(0,0,canvas.width, canvas.height);
 
+  // defeat image center (если успела прогрузиться — рисуем)
   const w = DEFEAT_IMG_W;
   const h = DEFEAT_IMG_H;
   const x = (canvas.width - w) / 2;
@@ -345,17 +365,12 @@ function drawGameOver(){
 
   if(defeat.complete && defeat.naturalWidth > 0){
     ctx.drawImage(defeat, x, y, w, h);
-    restartBtn.style.display = "block";
   }
 
   ctx.textAlign = "center";
   ctx.fillStyle = "rgba(255,255,255,0.96)";
   ctx.font = "56px Arial";
   ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 120);
-
-  ctx.fillStyle = "rgba(255,255,255,0.80)";
-  ctx.font = "18px Arial";
-  
 
   ctx.textAlign = "left";
 }
@@ -364,6 +379,8 @@ function loop(){
   clearField();
 
   if(!gameOver){
+    if(restartBtn) restartBtn.style.display = "none";
+
     if(readyToStart && !countdownActive){
       drawBugs();
       drawHUD();
