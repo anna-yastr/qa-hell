@@ -27,7 +27,7 @@
     margin: 14px auto 0;
     border:2px solid #444;
     border-radius: 12px;
-    touch-action: manipulation; /* чтобы тап на мобиле не скроллил/не зумил */
+    touch-action: manipulation; /* mobile taps */
   }
 
   .muted{ color: rgba(255,255,255,0.7); margin-top: 6px; }
@@ -37,43 +37,44 @@
 <body>
   <div class="wrap">
     <h1>QA Hell</h1>
-    <div class="muted">Click cursed shoes before they flood the screen</div>
+    <div class="muted">Tip: click/tap fast. Refresh page to restart.</div>
 
     <canvas id="game" width="900" height="540"></canvas>
-
-    <div class="muted" style="margin-top:10px;">
-      Tip: click/tap fast. Refresh page to restart.
-    </div>
   </div>
 
 <script>
 /* =========================
-   SETTINGS (твои “крутилки”)
+   SETTINGS (крутилки)
    ========================= */
 
-// Порог проигрыша: если багов строго больше — проигрыш
+// Text overlay (center screen)
+const RULE_TEXT = "Click cursed shoes before they flood the screen";
+const RULE_FONT_SIZE = 26;        // <— размер правила (px)
+const COUNTDOWN_FONT_SIZE = 22;   // <— размер отсчёта (px)
+const RULE_Y_OFFSET = -10;        // <— выше/ниже центра (отриц = выше)
+const COUNTDOWN_Y_OFFSET = 30;    // <— ниже правила
+
+// Game rules
 const MAX_BUGS_ON_SCREEN = 15;
 
-// Масштаб картинок (1.0 = базовый размер). Меняй как нравится.
-const IMAGE_SCALE = 1.55;
+// Bug visuals
+const IMAGE_SCALE = 1.55;     // <— скейл ботинка
+const BASE_BUG_SIZE = 120;    // базовый размер до скейла
 
-// Базовый размер “квадрата” под картинку (до скейла)
-const BASE_BUG_SIZE = 120;
-
-// Начальный интервал спавна (мс)
+// Spawn speed (geometric progression)
 const SPAWN_INTERVAL_START_MS = 900;
-
-// Геометрическое ускорение: каждый спавн интервал умножается на этот коэффициент.
-// < 1.0 = быстрее. Например 0.93 значит “каждый раз на 7% быстрее”.
-const SPAWN_INTERVAL_MULTIPLIER = 0.93;
-
-// Минимальный интервал, чтобы не превратилось в 1000 багов/сек
+const SPAWN_INTERVAL_MULTIPLIER = 0.93; // <1 быстрее
 const SPAWN_INTERVAL_MIN_MS = 180;
 
-// Пути к ассетам
+// Defeat window (image size tweak)
+const DEFEAT_IMG_W = 520;     // <— ширина defeat-картинки
+const DEFEAT_IMG_H = 300;     // <— высота defeat-картинки
+const DEFEAT_IMG_Y_OFFSET = -40; // <— подвинуть вверх/вниз
+
+// Assets
 const BG_SRC = "assets/background.png";
-const DEFEAT_SRC = "assets/defeat.png"; // можно не иметь, но у тебя есть
-const SHOE_COUNT = 15;                 // shoe1.png ... shoe15.png
+const DEFEAT_SRC = "assets/defeat.png";
+const SHOE_COUNT = 15;                 // shoe1..shoe15
 const SHOE_PREFIX = "assets/shoe";
 
 /* =========================
@@ -87,28 +88,67 @@ let bugs = [];
 let score = 0;
 let gameOver = false;
 
-// Load images
+// scaled bug size
+const BUG_SIZE = Math.max(10, Math.floor(BASE_BUG_SIZE * IMAGE_SCALE));
+
+// --------- Asset preloading (no start until loaded) ---------
 const bg = new Image();
+const defeat = new Image();
+const shoes = [];
+
+let assetsToLoad = 2 + SHOE_COUNT; // bg + defeat + shoes
+let assetsLoaded = 0;
+let readyToStart = false;
+
+function markLoaded(){
+  assetsLoaded++;
+  if(assetsLoaded >= assetsToLoad){
+    readyToStart = true;
+    startCountdown(); // запускаем 3..2..1
+  }
+}
+
+bg.onload = markLoaded;
+bg.onerror = markLoaded;
 bg.src = BG_SRC;
 
-const defeat = new Image();
+defeat.onload = markLoaded;
+defeat.onerror = markLoaded;
 defeat.src = DEFEAT_SRC;
 
-// shoes 1..15
-const shoes = [];
 for(let i=1; i<=SHOE_COUNT; i++){
   const img = new Image();
+  img.onload = markLoaded;
+  img.onerror = markLoaded;
   img.src = `${SHOE_PREFIX}${i}.png`;
   shoes.push(img);
 }
 
-// helper: random int [0..n-1]
-function randi(n){ return Math.floor(Math.random() * n); }
+// --------- Countdown ---------
+let countdown = 3;
+let countdownActive = false;
+let countdownTimerId = null;
 
-// scaled size
-const BUG_SIZE = Math.max(10, Math.floor(BASE_BUG_SIZE * IMAGE_SCALE));
+function startCountdown(){
+  // если уже стартовали — не запускать второй раз
+  if(countdownActive || gameOver) return;
 
-// spawn control (геометрическая прогрессия)
+  countdown = 3;
+  countdownActive = true;
+
+  // 3 секунды: 3 -> 2 -> 1 -> GO
+  countdownTimerId = setInterval(() => {
+    countdown--;
+    if(countdown <= 0){
+      clearInterval(countdownTimerId);
+      countdownTimerId = null;
+      countdownActive = false;
+      startSpawning();
+    }
+  }, 1000);
+}
+
+// --------- Spawn control (geometric progression) ---------
 let spawnInterval = SPAWN_INTERVAL_START_MS;
 let spawnTimerId = null;
 
@@ -129,18 +169,18 @@ function scheduleNextSpawn(){
 
   spawnTimerId = setTimeout(() => {
     spawnBug();
-    // геометрическое ускорение: интервал уменьшается
     spawnInterval = Math.max(SPAWN_INTERVAL_MIN_MS, Math.floor(spawnInterval * SPAWN_INTERVAL_MULTIPLIER));
     scheduleNextSpawn();
   }, spawnInterval);
 }
+
+function randi(n){ return Math.floor(Math.random() * n); }
 
 function spawnBug(){
   if(gameOver) return;
 
   const img = shoes[randi(shoes.length)];
 
-  // чтобы картинка не вылезала за границы
   const x = Math.random() * (canvas.width  - BUG_SIZE);
   const y = Math.random() * (canvas.height - BUG_SIZE);
 
@@ -149,12 +189,30 @@ function spawnBug(){
   if(bugs.length > MAX_BUGS_ON_SCREEN){
     gameOver = true;
     stopSpawning();
+    if(countdownTimerId) clearInterval(countdownTimerId);
   }
 }
 
-// Hit test (кликаем по прямоугольнику)
+// --------- Input / hit test ---------
+function pointerPos(evt){
+  const rect = canvas.getBoundingClientRect();
+  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top)  * scaleY
+  };
+}
+
 function tryHit(mx, my){
   if(gameOver) return;
+
+  // пока идёт загрузка/отсчёт — не кликается
+  if(!readyToStart || countdownActive) return;
 
   for(let i = bugs.length - 1; i >= 0; i--){
     const b = bugs[i];
@@ -165,21 +223,6 @@ function tryHit(mx, my){
       return;
     }
   }
-}
-
-function pointerPos(evt){
-  const rect = canvas.getBoundingClientRect();
-  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
-  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-
-  // переводим координаты из CSS-скейла в координаты canvas
-  const scaleX = canvas.width  / rect.width;
-  const scaleY = canvas.height / rect.height;
-
-  return {
-    x: (clientX - rect.left) * scaleX,
-    y: (clientY - rect.top)  * scaleY
-  };
 }
 
 canvas.addEventListener("click", (e) => {
@@ -193,19 +236,20 @@ canvas.addEventListener("touchstart", (e) => {
   tryHit(p.x, p.y);
 }, { passive: false });
 
+// --------- Drawing ---------
 function drawBackground(){
   if(bg.complete && bg.naturalWidth > 0){
     ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
   } else {
-    // fallback
     ctx.fillStyle = "#222";
     ctx.fillRect(0,0,canvas.width, canvas.height);
   }
 }
 
 function drawHUD(){
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.font = "20px Arial";
+  ctx.textAlign = "left";
   ctx.fillText(`Score: ${score}`, 14, 28);
 
   ctx.fillStyle = "rgba(255,255,255,0.7)";
@@ -215,62 +259,91 @@ function drawHUD(){
 
 function drawBugs(){
   for(const b of bugs){
-    // если картинка ещё не загрузилась, рисуем плейсхолдер
-    if(b.img.complete && b.img.naturalWidth > 0){
-      ctx.drawImage(b.img, b.x, b.y, b.size, b.size);
-    } else {
-      ctx.fillStyle = "red";
-      ctx.fillRect(b.x, b.y, b.size, b.size);
-    }
+    // Тут уже не будет красных квадратов, потому что мы не стартуем пока не загрузили всё.
+    ctx.drawImage(b.img, b.x, b.y, b.size, b.size);
   }
 }
 
-function drawGameOver(){
-  // затемнение
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
+function drawCenterOverlay(){
+  // затемнение чтобы текст читался
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
   ctx.fillRect(0,0,canvas.width, canvas.height);
 
-  // defeat картинка по центру (если есть)
-  const w = 420;
-  const h = 240;
+  ctx.textAlign = "center";
+
+  // Rule text
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.font = `${RULE_FONT_SIZE}px Arial`;
+  ctx.fillText(RULE_TEXT, canvas.width/2, canvas.height/2 + RULE_Y_OFFSET);
+
+  // Status line under rule
+  ctx.fillStyle = "rgba(255,255,255,0.78)";
+  ctx.font = `${COUNTDOWN_FONT_SIZE}px Arial`;
+
+  let line = "";
+  if(!readyToStart){
+    line = `Loading assets: ${assetsLoaded}/${assetsToLoad}`;
+  } else if(countdownActive){
+    line = `Starting in: ${countdown}`;
+  } else {
+    line = ""; // после старта не показываем
+  }
+
+  if(line){
+    ctx.fillText(line, canvas.width/2, canvas.height/2 + COUNTDOWN_Y_OFFSET);
+  }
+
+  ctx.textAlign = "left";
+}
+
+function drawGameOver(){
+  ctx.fillStyle = "rgba(0,0,0,0.60)";
+  ctx.fillRect(0,0,canvas.width, canvas.height);
+
+  // defeat image center
+  const w = DEFEAT_IMG_W;
+  const h = DEFEAT_IMG_H;
   const x = (canvas.width - w) / 2;
-  const y = (canvas.height - h) / 2 - 30;
+  const y = (canvas.height - h) / 2 + DEFEAT_IMG_Y_OFFSET;
 
   if(defeat.complete && defeat.naturalWidth > 0){
     ctx.drawImage(defeat, x, y, w, h);
   }
 
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.font = "56px Arial";
   ctx.textAlign = "center";
-  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 80);
+  ctx.fillStyle = "rgba(255,255,255,0.96)";
+  ctx.font = "56px Arial";
+  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 120);
 
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.font = "18px Arial";
-  ctx.fillText("Refresh the page to restart", canvas.width/2, canvas.height/2 + 115);
+  ctx.fillText("Refresh the page to restart", canvas.width/2, canvas.height/2 + 155);
 
   ctx.textAlign = "left";
 }
 
 function loop(){
-  // background
   drawBackground();
 
-  // bugs
-  drawBugs();
-
-  // hud
-  drawHUD();
-
-  if(gameOver){
+  if(!gameOver){
+    if(readyToStart && !countdownActive){
+      drawBugs();
+      drawHUD();
+    } else {
+      // Loading / Countdown overlay
+      drawCenterOverlay();
+      drawHUD();
+    }
+  } else {
+    // show final frame background + bugs behind overlay (optional)
+    drawBugs();
+    drawHUD();
     drawGameOver();
   }
 
   requestAnimationFrame(loop);
 }
 
-// стартуем
-startSpawning();
 loop();
 </script>
 
