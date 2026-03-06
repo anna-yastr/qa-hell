@@ -378,9 +378,18 @@ function drawGameOver(){
   }
 
   ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.96)";
-  ctx.font = "56px Arial";
-  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 80);
+
+  ctx.font = "72px Arial";
+  ctx.fillStyle = "white";
+   
+  /* красное зловещее свечение */
+  ctx.shadowColor = "rgba(255, 40, 40, 0.9)";
+  ctx.shadowBlur = 25;
+   
+  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 40);
+   
+  /* выключаем свечение чтобы не влияло на другие тексты */
+  ctx.shadowBlur = 0;
 
   ctx.textAlign = "left";
 }
