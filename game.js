@@ -10,7 +10,7 @@ const RULE_Y_OFFSET = -10;
 const STATUS_Y_OFFSET = 30;
 
 // Game rules
-const MAX_BUGS_ON_SCREEN = 15;
+const MAX_BUGS_ON_SCREEN = 17;
 
 // Bug visuals
 const IMAGE_SCALE = 1.75;     // базовый скейл ботинка
@@ -20,8 +20,9 @@ const ROTATE_DEG = 30;        // ±30 градусов
 
 // Spawn speed (geometric progression)
 const SPAWN_INTERVAL_START_MS = 900;
-const SPAWN_INTERVAL_MULTIPLIER = 0.96; // ближе к 1.0 = медленнее ускоряется
-const SPAWN_INTERVAL_MIN_MS = 180;
+const SPAWN_INTERVAL_MULTIPLIER = 0.975; // ближе к 1.0 = медленнее ускоряется
+const SPAWN_INTERVAL_MIN_MS = 300;
+const CLICK_SPEEDUP_FACTOR = 0.988;
 
 // Defeat image sizing
 const DEFEAT_IMG_W = 520;
@@ -273,6 +274,14 @@ function tryHit(mx, my){
     if(hit){
       bugs.splice(i, 1);
       score += 1;
+      
+      // дополнительное ускорение за успешный клик
+      spawnInterval = Math.max(
+      SPAWN_INTERVAL_MIN_MS,
+      Math.floor(spawnInterval * CLICK_SPEEDUP_FACTOR)
+      );
+
+       
       return;
     }
   }
