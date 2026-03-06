@@ -20,7 +20,7 @@ const ROTATE_DEG = 30;        // ±30 градусов
 
 // Spawn speed (geometric progression)
 const SPAWN_INTERVAL_START_MS = 900;
-const SPAWN_INTERVAL_MULTIPLIER = 0.975; // ближе к 1.0 = медленнее ускоряется
+const SPAWN_INTERVAL_MULTIPLIER = 0.970; // ближе к 1.0 = медленнее ускоряется
 const SPAWN_INTERVAL_MIN_MS = 300;
 const CLICK_SPEEDUP_FACTOR = 0.988;
 
