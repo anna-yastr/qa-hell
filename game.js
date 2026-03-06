@@ -380,7 +380,7 @@ function drawGameOver(){
   ctx.textAlign = "center";
   ctx.fillStyle = "rgba(255,255,255,0.96)";
   ctx.font = "56px Arial";
-  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 120);
+  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 80);
 
   ctx.textAlign = "left";
 }
