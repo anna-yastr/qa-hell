@@ -379,14 +379,14 @@ function drawGameOver(){
 
   ctx.textAlign = "center";
 
-  ctx.font = "72px Arial";
+  ctx.font = "50px Arial";
   ctx.fillStyle = "white";
    
   /* красное зловещее свечение */
   ctx.shadowColor = "rgba(255, 40, 40, 0.9)";
   ctx.shadowBlur = 25;
    
-  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 40);
+  ctx.fillText("QA FAILED", canvas.width/2, canvas.height/2 + 60);
    
   /* выключаем свечение чтобы не влияло на другие тексты */
   ctx.shadowBlur = 0;
