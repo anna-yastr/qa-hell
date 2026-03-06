@@ -40,20 +40,18 @@ body::before{
 
 .top{
   display:flex;
-  justify-content: center;
-  align-items: center;
+  justify-content:center;
 }
 
 .titleBlock{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
   text-align:center;
 }
 
-.titleBlock{
-  text-align:left;
-}
-
 h1{
-  margin: 12px 0 4px;
+  margin: 12px 0 6px;
   font-size: 52px;
   text-shadow: 0 0 12px rgba(255,120,60,0.6);
 }
@@ -61,6 +59,8 @@ h1{
 .muted{
   color: rgba(255,255,255,0.75);
   font-size: 14px;
+  max-width: 420px;
+  line-height: 1.4;
 }
 
 /* =========================
@@ -102,7 +102,7 @@ canvas{
 
   /* положение поверх defeat */
   left: 50%;
-  top: 82%;
+  top: 98%;
 
   transform: translate(-50%, -50%);
 
