@@ -26,7 +26,7 @@ const SPAWN_INTERVAL_MIN_MS = 180;
 // Defeat image sizing
 const DEFEAT_IMG_W = 520;
 const DEFEAT_IMG_H = 350;
-const DEFEAT_IMG_Y_OFFSET = -40;
+const DEFEAT_IMG_Y_OFFSET = 20;
 
 // Assets
 const DEFEAT_SRC = "assets/defeat.png";
