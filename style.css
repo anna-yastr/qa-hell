@@ -40,9 +40,12 @@ body::before{
 
 .top{
   display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.titleBlock{
+  text-align:center;
 }
 
 .titleBlock{
@@ -98,7 +101,7 @@ canvas{
 
   /* положение поверх defeat */
   left: 50%;
-  top: 72%;
+  top: 82%;
 
   transform: translate(-50%, -50%);
 
