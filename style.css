@@ -102,11 +102,11 @@ canvas{
 
   /* положение поверх defeat */
   left: 50%;
-  top: 92%;
+  top: 86%;
 
   transform: translate(-50%, -50%);
 
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   letter-spacing: 0.2px;
 
